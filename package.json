@@ -1,7 +1,7 @@
 {
-  "name": "miniflare-typescript-esbuild-jest",
+  "name": "durable-limiter",
   "version": "1.0.0",
-  "description": "Example project using Miniflare, TypeScript, esbuild and Jest",
+  "description": "A rate-limiter using Durable Objects on CF Workers",
   "type": "module",
   "module": "./dist/index.mjs",
   "scripts": {

@@ -1,16 +1,16 @@
-name = "miniflare-typescript-esbuild-jest"
+name = "durable-limiter"
 main = "dist/index.mjs"
 compatibility_date = "2022-05-28"
 compatibility_flags = []
 
 [durable_objects]
 bindings = [
-  { name = "COUNTER", class_name = "Counter" }
+  { name = "RATE_LIMITER", class_name = "RateLimiter" }
 ]
 
 [[migrations]]
 tag = "v1"
-new_classes = ["Counter"]
+new_classes = ["RateLimiter"]
 
 [build]
 command = "node build.js"

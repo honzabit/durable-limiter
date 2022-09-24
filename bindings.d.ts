@@ -1,3 +1,3 @@
 interface Bindings {
-  COUNTER: DurableObjectNamespace;
+  RATE_LIMITER: DurableObjectNamespace;
 }

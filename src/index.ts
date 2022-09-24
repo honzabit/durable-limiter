@@ -1,23 +1,43 @@
 export async function handleRequest(request: Request, env: Bindings) {
-  // Match route against pattern /:name/*action
-  const url = new URL(request.url);
-  const match = /\/(?<name>[^/]+)(?<action>.*)/.exec(url.pathname);
-  if (!match?.groups) {
-    // If we didn't specify a name, default to "test"
-    return Response.redirect(`${url.origin}/test/increment`, 302);
+
+  const requiredHeaders = [
+    'x-dl-type',
+    'x-dl-scope',
+    'x-dl-key',
+    'x-dl-limit',
+    'x-dl-interval'
+  ]
+
+  const missingHeaders = requiredHeaders.filter(h => !request.headers.has(h))
+
+  if (missingHeaders.length > 0) {
+    return new Response(`{ "error": "Missing required headers: ${missingHeaders.join(', ')}"}`, { status: 400, headers: { "Content-Type": "application/json" } })
   }
 
-  // Forward the request to the named Durable Object...
-  const { COUNTER } = env;
-  const id = COUNTER.idFromName(match.groups.name);
-  const stub = COUNTER.get(id);
-  // ...removing the name prefix from URL
-  url.pathname = match.groups.action;
-  return stub.fetch(url.toString());
+  const type = (request.headers.get('x-dl-type') as string).toLocaleLowerCase()
+  if(type !== 'sliding' && type !== 'fixed') {
+    return new Response(`{ "error": "Invalid x-dl-type: ${type}. Supported types are one of [sliding, fixed]"}`, { status: 400, headers: { "Content-Type": "application/json" } })
+  }
+
+  const key = request.headers.get('x-dl-key') as string
+
+  let id = env.RATE_LIMITER.idFromName(key)
+  let rateLimiter = env.RATE_LIMITER.get(id)
+
+  return rateLimiter.fetch('http://durable-limiter', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-dl-type': request.headers.get('x-dl-type') as string,
+      'x-dl-scope': request.headers.get('x-dl-scope') as string,
+      'x-dl-key': request.headers.get('x-dl-key') as string,
+      'x-dl-limit': request.headers.get('x-dl-limit') as string,
+      'x-dl-interval': request.headers.get('x-dl-interval') as string
+    }
+  })
 }
 
 const worker: ExportedHandler<Bindings> = { fetch: handleRequest };
 
-// Make sure we export the Counter Durable Object class
-export { Counter } from "./counter";
+export { RateLimiter } from "./ratelimiter";
 export default worker;
