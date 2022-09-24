@@ -19,8 +19,8 @@ Probably as a subworker [as described here](https://developers.cloudflare.com/wo
 
 ## Responses
 Response __status__ will be one of:
-* 200, meaning that the request __is not__ rate-limited
-* 429, meaning that the request __is__ rate-limited
+* `200`, meaning that the request __is not__ rate-limited
+* `429`, meaning that the request __is__ rate-limited
 
 Response __body__ depends on the type of the algorithm used and the status.   
 
