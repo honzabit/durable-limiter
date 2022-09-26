@@ -11,6 +11,9 @@ Rate Limiter - built for [Cloudflare Workers](https://developers.cloudflare.com/
 ## How to use
 You can use it as a subworker [as described here](https://developers.cloudflare.com/workers/platform/bindings/about-service-bindings/).
 
+## What about pricing? How it compares with CF's own rate-limiter?
+Well, it all depends in the use-case. You can check out the [cost calculator](https://dl-cost-calculator.dev0x.workers.dev/).
+
 ## Headers
 * `x-dl-type`: type can be one of `sliding` or `fixed` and describes the algorithm that will be used.
 * `x-dl-scope`: the value of this header is used as the rate-limit scope.
