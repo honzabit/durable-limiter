@@ -22,6 +22,8 @@ export class RateLimiter {
       const currentKey = `${keyPrefix}:${currentWindow}`
       const previousKey = `${keyPrefix}:${currentWindow - 1}`
 
+      const error_string = "rate-limited"
+
       const recordRequest = async() => {
           const curr = parseInt(await this.state.storage.get(currentKey) as string) || 0
           await this.state.storage.put(currentKey, curr+1)
@@ -32,28 +34,47 @@ export class RateLimiter {
 
       let resBody: { error?: string, rate?: number, remaining?: number, resets?: number } = {}
 
-      if(type === 'sliding') {
-        const rate = (previousCount * (interval - distanceFromLastWindow) / interval) + currentCount
-        resBody.rate = rate
-        if(rate >= limit) {
-          resBody.error = "rate-limited"
-        }
-      } else if(type === 'fixed') {
-        resBody.resets = (currentWindow*interval)+interval
-        if(currentCount >= limit) {
-          resBody.error = "rate-limited"
-        } else {
-          resBody.remaining = (limit-currentCount) - 1 // -1 because we're recording this request *after* the check
+      switch(type) {
+        case 'sliding':
+          const rate = (previousCount * (interval - distanceFromLastWindow) / interval) + currentCount  
+          resBody.rate = rate
+          if(rate >= limit) {
+            resBody.error = error_string
+          }
+          break;
+        case 'fixed':
           resBody.resets = (currentWindow*interval)+interval
+          if(currentCount >= limit) {
+            resBody.error = error_string
+          } else {
+            resBody.remaining = (limit-currentCount) - 1 // -1 because we're recording this request *after* the check
+            resBody.resets = (currentWindow*interval)+interval
+          }
+          break;
+        default: {
+          throw new Error(`Unknown rate limiter type: ${type}`)
         }
       }
+
+      let headers:Headers = new Headers()
+      headers.set('Content-Type', 'application/json')
 
       if(! resBody.error) {
         await recordRequest()
-        return new Response(JSON.stringify(resBody), { status: 200, headers: { "Content-Type": "application/json" } })
+        return new Response(JSON.stringify(resBody), { status: 200, headers: headers })
+      } else {
+        let exp
+        if(type == 'fixed' && resBody.resets) {
+          exp = `${Math.floor(resBody.resets - (Date.now() / 1000))}`
+          headers.set('Expires', new Date(resBody.resets*1000).toUTCString())
+        } else if(type == 'sliding' && resBody.rate && resBody.rate > limit) {
+          exp = Math.floor(((resBody.rate / limit) - 1) * interval)
+          headers.set('Expires', new Date((Date.now()) + (1000 * exp)).toUTCString())
+        }
+        headers.set('Cache-Control', `public, max-age=${exp}, s-maxage=${exp}, must-revalidate`)
       }
 
-      return new Response(JSON.stringify(resBody), { status: 429, headers: { "Content-Type": "application/json" } })
+      return new Response(JSON.stringify(resBody), { status: 429, headers: headers })
     }
 
 }

@@ -1,9 +1,13 @@
 import { jest } from '@jest/globals'
 import { handleRequest } from "@/index";
 
-test("sliding rate limit", async () => {
 
   const env = getMiniflareBindings();
+  const ctx: ExecutionContext = { waitUntil: () => { }, passThroughOnException: () => { } }
+
+
+test("sliding rate limit", async () => {
+  
   const rlRequest = new Request("http://localhost", {
     headers: {
       'x-dl-type': 'sliding',
@@ -16,10 +20,10 @@ test("sliding rate limit", async () => {
 
   let res
   
-  res = await handleRequest(rlRequest, env);
+  res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(200);
   
-  res = await handleRequest(rlRequest, env);
+  res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(429);
 
   expect(await res.json()).toStrictEqual(expect.objectContaining({
@@ -29,24 +33,23 @@ test("sliding rate limit", async () => {
 
   rlRequest.headers.set('x-dl-key', '10.10.10.11')
 
-  res = await handleRequest(rlRequest, env);
+  res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(200);
 
-  res = await handleRequest(rlRequest, env);
+  res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(429);
 
   rlRequest.headers.set('x-dl-scope', 'http://another_domain')
-  res = await handleRequest(rlRequest, env);
+  res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(200);
 
-  res = await handleRequest(rlRequest, env);
+  res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(429);
 
 });
 
 test("fixed rate limit", async () => {
   jest.useFakeTimers()
-  const env = getMiniflareBindings();
   const rlRequest = new Request("http://localhost", {
     headers: {
       'x-dl-type': 'fixed',
@@ -59,35 +62,42 @@ test("fixed rate limit", async () => {
 
   let res
   
-  res = await handleRequest(rlRequest, env);
+  res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(200);
   
-  res = await handleRequest(rlRequest, env);
+  res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(429);
 
-  expect(await res.json()).toStrictEqual(expect.objectContaining({
+  type resBody = { resets: string }
+  const resBody: resBody = await res.json()
+  
+  expect(resBody).toStrictEqual(expect.objectContaining({
     error: expect.any(String),
     resets: expect.any(Number),
   }))
 
+  res = await handleRequest(rlRequest, env, ctx);
+  expect(res.status).toBe(429);
+  expect(res.headers.get('cf-cache-status')).toBe('HIT')
+
   rlRequest.headers.set('x-dl-key', '10.10.10.11')
 
-  res = await handleRequest(rlRequest, env);
+  res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(200);
 
-  res = await handleRequest(rlRequest, env);
+  res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(429);
 
   rlRequest.headers.set('x-dl-scope', 'another_domain')
   
-  res = await handleRequest(rlRequest, env);
+  res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(200);
 
-  res = await handleRequest(rlRequest, env);
+  res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(429);
 
   setTimeout(async () => {
-    res = await handleRequest(rlRequest, env);
+    res = await handleRequest(rlRequest, env, ctx);
     expect(res.status).toBe(200);
   }, 15000)
 

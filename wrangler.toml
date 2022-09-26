@@ -16,6 +16,6 @@ new_classes = ["RateLimiter"]
 command = "node build.js"
 
 [miniflare]
-kv_persist = true
-cache_persist = true
-durable_objects_persist = true
+kv_persist = "./kv-data/"
+cache_persist = "./cache-data/"
+durable_objects_persist = "./do-data/"

@@ -4,6 +4,7 @@ Rate Limiter - built for [Cloudflare Workers](https://developers.cloudflare.com/
 - [x] Supports [fixed or sliding window algorithms](https://www.quinbay.com/blog/understanding-rate-limiting-algorithms)
 - [x] Scoped rate-limiting
 - [x] Responses provide usage information
+- [x] Caching 
 - [ ] Tested in production (well, not actually)
 
 
@@ -19,8 +20,8 @@ You can use it as a subworker [as described here](https://developers.cloudflare.
 
 ## Responses
 Response __status__ will be one of:
-* `200`, meaning that the request __is not__ rate-limited
-* `429`, meaning that the request __is__ rate-limited
+* `200`, meaning that the request __should not be__ rate-limited
+* `429`, meaning that the request __should be__ rate-limited
 
 Response __body__ depends on the type of the algorithm used and the status.   
 

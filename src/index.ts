@@ -1,4 +1,4 @@
-export async function handleRequest(request: Request, env: Bindings) {
+export async function handleRequest(request: Request, env: Bindings, ctx: ExecutionContext) {
 
   const requiredHeaders = [
     'x-dl-type',
@@ -8,6 +8,8 @@ export async function handleRequest(request: Request, env: Bindings) {
     'x-dl-interval'
   ]
 
+  const fakeDomain = 'http://durable-limiter.net'
+
   const missingHeaders = requiredHeaders.filter(h => !request.headers.has(h))
 
   if (missingHeaders.length > 0) {
@@ -15,7 +17,8 @@ export async function handleRequest(request: Request, env: Bindings) {
   }
 
   const type = (request.headers.get('x-dl-type') as string).toLocaleLowerCase()
-  if(type !== 'sliding' && type !== 'fixed') {
+
+  if (type !== 'sliding' && type !== 'fixed') {
     return new Response(`{ "error": "Invalid x-dl-type: ${type}. Supported types are one of [sliding, fixed]"}`, { status: 400, headers: { "Content-Type": "application/json" } })
   }
 
@@ -24,7 +27,9 @@ export async function handleRequest(request: Request, env: Bindings) {
   let id = env.RATE_LIMITER.idFromName(key)
   let rateLimiter = env.RATE_LIMITER.get(id)
 
-  return rateLimiter.fetch('http://durable-limiter', {
+  let cache = await caches.open('durable-limiter');
+
+  const rlRequest = new Request(fakeDomain, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -35,6 +40,36 @@ export async function handleRequest(request: Request, env: Bindings) {
       'x-dl-interval': request.headers.get('x-dl-interval') as string
     }
   })
+
+  let cacheKey: string = fakeDomain
+  for (const hp of rlRequest.headers.entries()) {
+    cacheKey += `/${hp[0]}:${hp[1]}`
+  }
+
+  let response = await cache.match(cacheKey);
+
+  if (!response) {
+    response = await rateLimiter.fetch(rlRequest)
+    if (response.status == 429) {
+      /** 
+       * https://www.rfc-editor.org/rfc/rfc6585 points that responses with 429 MUST NOT be cached
+       * so, we change the status code to 200 in order to cache the response and then return the 
+       * original status code
+       */
+      response = new Response(response.body, { status: 200, headers: response.headers });
+      ctx.waitUntil(cache.put(cacheKey, response.clone()));
+      response = new Response(response.body, { status: 429, headers: response.headers });
+    }
+  } else {
+    response = new Response(response.body, { status: 429, headers: response.headers });
+    response.headers.set('x-dl-cache', 'HIT')
+  }
+
+  response.headers.delete('Cache-Control')
+  response.headers.delete('Expires')
+  response.headers.set('Date', new Date().toUTCString())
+
+  return response
 }
 
 const worker: ExportedHandler<Bindings> = { fetch: handleRequest };
