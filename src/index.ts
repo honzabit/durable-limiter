@@ -65,14 +65,10 @@ export async function handleRequest(request: Request, env: Bindings, ctx: Execut
     response.headers.set('x-dl-cache', 'HIT')
   }
 
-  response.headers.delete('Cache-Control')
-  response.headers.delete('Expires')
-  response.headers.set('Date', new Date().toUTCString())
-
   return response
 }
 
-const worker: ExportedHandler<Bindings> = { fetch: handleRequest };
+const worker: ExportedHandler<Bindings> = { fetch: handleRequest};
 
 export { RateLimiter } from "./ratelimiter";
 export default worker;

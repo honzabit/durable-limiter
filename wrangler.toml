@@ -1,7 +1,7 @@
 name = "durable-limiter"
 main = "dist/index.mjs"
-compatibility_date = "2022-05-28"
-compatibility_flags = []
+compatibility_date = "2022-10-05"
+compatibility_flags = ["durable_object_alarms"]
 
 [durable_objects]
 bindings = [
