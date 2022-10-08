@@ -5,6 +5,7 @@ Rate Limiter - built for [Cloudflare Workers](https://developers.cloudflare.com/
 - [x] Scoped rate-limiting
 - [x] Responses provide usage information
 - [x] Caching 
+- [x] Cleanup of stale DO data using [alarm](https://developers.cloudflare.com/workers/learning/using-durable-objects/#alarms-in-durable-objects)
 - [ ] Tested in production (well, not actually)
 
 
