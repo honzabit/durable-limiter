@@ -62,6 +62,7 @@ export class RateLimiter {
       const key = request.headers.get('x-dl-key') as string
       const limit = parseInt(request.headers.get('x-dl-limit') as string)
       const interval = parseInt(request.headers.get('x-dl-interval') as string)
+	  const blockDuration = parseInt(request.headers.get('x-dl-block-duration') as string) ?? interval
 
       const keyPrefix = `${type}|${scope}|${key}|${limit}|${interval}`
 
@@ -111,12 +112,12 @@ export class RateLimiter {
         await recordRequest()
         return new Response(JSON.stringify(resBody), { status: 200, headers: headers })
       } else {
-        let exp
+        let exp: number = 0
         if(type == 'fixed' && resBody.resets) {
-          exp = `${Math.floor(resBody.resets - (Date.now() / 1000))}`
-          headers.set('Expires', new Date(resBody.resets * 1000).toUTCString())
+          exp = (blockDuration > 0)? blockDuration : Math.floor(resBody.resets - (Date.now() / 1000))
+          headers.set('Expires', new Date(Date.now() + (exp * 1000)).toUTCString())
         } else if(type == 'sliding' && resBody.rate && resBody.rate > limit) {
-          exp = Math.floor(((resBody.rate / limit) - 1) * interval)
+          exp = (blockDuration > 0)? blockDuration : Math.floor(((resBody.rate / limit) - 1) * interval)
           headers.set('Expires', new Date((Date.now()) + (1000 * exp)).toUTCString())
         }
         headers.set('Cache-Control', `public, max-age=${exp}, s-maxage=${exp}, must-revalidate`)

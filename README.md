@@ -6,6 +6,7 @@ Rate Limiter - built for [Cloudflare Workers](https://developers.cloudflare.com/
 - [x] Responses provide usage information
 - [x] Caching 
 - [x] Cleanup of stale DO data using [alarm](https://developers.cloudflare.com/workers/learning/using-durable-objects/#alarms-in-durable-objects)
+- [x] Custom block time  
 - [ ] Tested in production (well, not actually)
 
 
@@ -21,6 +22,7 @@ Well, it all depends in the use-case. You can check out the [cost calculator](ht
 * `x-dl-key`: the key is the client information, can be an IP (most of the time), or a network, a username, or even a user-agent. In general, feel free to use whatever you like.
 * `x-dl-limit`: the value of this header provides the request limit (e.g. 10).
 * `x-dl-interval`: the interval (in seconds) upon which all calculations are based.
+* `x-dl-block-duration`: this is an optional header for specifying a custom block time (if ommitted, the interval is used instead)
 
 ## Responses
 Response __status__ will be one of:

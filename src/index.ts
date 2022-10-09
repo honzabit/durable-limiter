@@ -29,10 +29,10 @@ export async function handleRequest(request: Request, env: Bindings, ctx: Execut
 
   let cache = await caches.open('durable-limiter');
 
+  const blockDuration = (request.headers.has('x-dl-block-duration'))? request.headers.get('x-dl-block-duration') as string : undefined
   const rlRequest = new Request(fakeDomain, {
     method: 'GET',
     headers: {
-      'Content-Type': 'application/json',
       'x-dl-type': request.headers.get('x-dl-type') as string,
       'x-dl-scope': request.headers.get('x-dl-scope') as string,
       'x-dl-key': request.headers.get('x-dl-key') as string,
@@ -40,6 +40,7 @@ export async function handleRequest(request: Request, env: Bindings, ctx: Execut
       'x-dl-interval': request.headers.get('x-dl-interval') as string
     }
   })
+  if( undefined !== blockDuration) rlRequest.headers.append('x-dl-block-duration', blockDuration as string)
 
   let cacheKey: string = fakeDomain
   for (const hp of rlRequest.headers.entries()) {
