@@ -53,14 +53,14 @@ The `sliding` type will produce the following bodies:
 * on `200` status (not rate-limited):
 ```json
 {
-    "rate": {number, rate of the incoming requests}
+    "rate": "number, rate of the incoming requests"
 }
 ```
 
 * on `429` status (rate-limited):
 ```json
 {
-	"rate": {number, rate of the incoming requests},
+	"rate": "number, rate of the incoming requests",
 	"error": "rate-limited"
 }
 ```   
@@ -69,15 +69,15 @@ The `fixed` type will respond with the following bodies:
 * on `200` status (not rate-limited):
 ```json
 {
-	"resets": {number, seconds since epoch},
-	"remaining": {number, remaining requests until rate-limiting}
+	"resets": "number, seconds since epoch",
+	"remaining": "number, remaining requests until rate-limiting"
 }
 ```   
 
 * on `429` status (rate-limited):
 ```json
 {
-	"resets": {number, seconds since epoch},
+	"resets": "number, seconds since epoch",
 	"error": "rate-limited"
 }
 ```
