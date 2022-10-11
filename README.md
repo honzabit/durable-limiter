@@ -6,7 +6,8 @@ Rate Limiter - built for [Cloudflare Workers](https://developers.cloudflare.com/
 - [x] Responses provide usage information
 - [x] Caching 
 - [x] Cleanup of stale DO data using [alarm](https://developers.cloudflare.com/workers/learning/using-durable-objects/#alarms-in-durable-objects)
-- [x] Custom block time  
+- [x] Custom block time
+- [x] Actions: one of [block,redirect]
 - [ ] Tested in production (well, not actually)
 
 
@@ -18,17 +19,32 @@ You can use it as a subworker [as described here](https://developers.cloudflare.
 ## What about pricing? How it compares with CF's own rate-limiter?
 Well, it all depends in the use-case. You can check out the [cost calculator](https://dl-cost-calculator.dev0x.workers.dev/).
 
-## Headers
-* `x-dl-type`: type can be one of `sliding` or `fixed` and describes the algorithm that will be used.
-* `x-dl-scope`: the value of this header is used as the rate-limit scope.
-* `x-dl-key`: the key is the client information, can be an IP (most of the time), or a network, a username, or even a user-agent. In general, feel free to use whatever you like.
-* `x-dl-limit`: the value of this header provides the request limit (e.g. 10).
-* `x-dl-interval`: the interval (in seconds) upon which all calculations are based.
-* `x-dl-block-duration`: this is an optional header for specifying a custom block time (if ommitted, the interval is used instead)
+## Description of JSON Body (usage)
+* `type`: type can be one of `sliding` or `fixed` and describes the algorithm that will be used.
+* `scope`: the value of this header is used as the rate-limit scope.
+* `key`: the key is the client information, can be an IP (most of the time), or a network, a username, or even a user-agent. In general, feel free to use whatever you like.
+* `limit`: the value of this header provides the request limit (e.g. 10).
+* `interval`: the interval (in seconds) upon which all calculations are based.
+* `action?`: optional, defaults to block, but can be one of
+```json
+{
+	"type": "block",
+	"for?": "optional, seconds to be blocked for, defaults to value of {interval}"
+}
+```
+or
+```json
+{
+	"type": "redirect",
+	"to": "https://somewhere",
+	"status": "one of [300, 301, 302, 303, 304, 307, 308]"
+}
+```
 
 ## Responses
 Response __status__ will be one of:
 * `200`, meaning that the request __should not be__ rate-limited
+* `3xx`, means the request __should be__ redirected
 * `429`, meaning that the request __should be__ rate-limited
 
 Response __body__ depends on the type of the algorithm used and the status.   

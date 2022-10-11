@@ -8,15 +8,15 @@ import { handleRequest } from "@/index";
 
 test("sliding rate limit", async () => {
   
-  const rlRequest = new Request("http://localhost", {
-    headers: {
-      'x-dl-type': 'sliding',
-      'x-dl-scope': 'http://a_domain', // rate-limiting using domain as scope
-      'x-dl-key': '10.10.10.10', // rate-limiting by IP
-      'x-dl-limit': '1',
-      'x-dl-interval': '300'
-    }
-  })
+	const body =  {
+		'type': 'sliding',
+		'scope': 'http://a_domain', // rate-limiting using domain as scope
+		'key': '10.10.10.10', // rate-limiting by IP
+		'limit': '1',
+		'interval': '300'
+	}
+
+  let rlRequest = new Request("http://localhost", { method: "POST", body: JSON.stringify(body) })
 
   let res
   
@@ -31,7 +31,8 @@ test("sliding rate limit", async () => {
     rate: expect.any(Number),
   }))
 
-  rlRequest.headers.set('x-dl-key', '10.10.10.11')
+  body.key = '10.10.10.11'
+  rlRequest = new Request("http://localhost", { method: "POST", body: JSON.stringify(body) })
 
   res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(200);
@@ -39,7 +40,9 @@ test("sliding rate limit", async () => {
   res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(429);
 
-  rlRequest.headers.set('x-dl-scope', 'http://another_domain')
+  body.scope = 'another.domain'
+  rlRequest = new Request("http://localhost", { method: "POST", body: JSON.stringify(body) })
+
   res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(200);
 
@@ -50,15 +53,16 @@ test("sliding rate limit", async () => {
 
 test("fixed rate limit", async () => {
   jest.useFakeTimers()
-  const rlRequest = new Request("http://localhost", {
-    headers: {
-      'x-dl-type': 'fixed',
-      'x-dl-scope': 'a_domain',
-      'x-dl-key': '10.10.10.10',
-      'x-dl-limit': '1',
-      'x-dl-interval': '15'
-    }
-  })
+
+  let body = {
+	'type': 'fixed',
+	'scope': 'a_domain',
+	'key': '10.10.10.10',
+	'limit': '1',
+	'interval': '15'
+  }
+
+  let rlRequest = new Request("http://localhost", { method: "POST", body: JSON.stringify(body) })
 
   let res
   
@@ -73,14 +77,16 @@ test("fixed rate limit", async () => {
   
   expect(resBody).toStrictEqual(expect.objectContaining({
     error: expect.any(String),
-    resets: expect.any(Number),
+    resets: expect.any(String),
   }))
 
   res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(429);
   expect(res.headers.get('cf-cache-status')).toBe('HIT')
+  expect(res.headers.get('x-dl-cache')).toBe('HIT')
 
-  rlRequest.headers.set('x-dl-key', '10.10.10.11')
+  body.key = '10.10.10.11'
+  rlRequest = new Request("http://localhost", { method: "POST", body: JSON.stringify(body) })
 
   res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(200);
@@ -88,7 +94,8 @@ test("fixed rate limit", async () => {
   res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(429);
 
-  rlRequest.headers.set('x-dl-scope', 'another_domain')
+  body.scope = 'another_domain'
+  rlRequest = new Request("http://localhost", { method: "POST", body: JSON.stringify(body) })
   
   res = await handleRequest(rlRequest, env, ctx);
   expect(res.status).toBe(200);
