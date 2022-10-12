@@ -8,10 +8,10 @@
     "build": "node build.js",
     "dev": "miniflare --live-reload --debug --modules dist/index.mjs",
     "dev:remote": "wrangler dev",
-    "test": "npm run build && node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js",
+    "test": "npm run build && NODE_OPTIONS=--experimental-vm-modules npx vitest --silent run",
     "types:check": "tsc && tsc -p test/tsconfig.json",
-	"format": "prettier --write \"src/**/*.{ts,js}\"",
-	"lint": "eslint \"src/**/*.{ts,js}\" --fix",
+    "format": "prettier --write \"src/**/*.{ts,js}\"",
+    "lint": "eslint \"src/**/*.{ts,js}\" --fix",
     "deploy": "wrangler publish"
   },
   "keywords": [],
@@ -19,18 +19,16 @@
   "license": "MIT",
   "devDependencies": {
     "@cloudflare/workers-types": "^3.11.0",
-    "@types/jest": "^27.5.1",
     "@typescript-eslint/eslint-plugin": "^5.40.0",
     "@typescript-eslint/parser": "^5.40.0",
     "esbuild": "^0.14.41",
     "eslint": "^8.25.0",
     "eslint-config-prettier": "^8.5.0",
-    "jest": "^28.1.0",
-    "jest-environment-miniflare": "^2.5.0",
     "miniflare": "^2.8.2",
     "prettier": "^2.7.1",
-    "ts-jest": "^28.0.3",
     "typescript": "^4.8.4",
+    "vitest": "^0.24.1",
+    "vitest-environment-miniflare": "^2.10.0",
     "wrangler": "^2.0.7"
   }
 }

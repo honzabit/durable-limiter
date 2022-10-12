@@ -1,6 +1,5 @@
-import { jest } from '@jest/globals'
+import { test, expect, vi } from 'vitest'
 import { handleRequest } from "@/index";
-
 
   const env = getMiniflareBindings();
   const ctx: ExecutionContext = { waitUntil: () => { }, passThroughOnException: () => { } }
@@ -64,7 +63,7 @@ test("sliding rate limit", async () => {
 });
 
 test("fixed rate limit", async () => {
-  jest.useFakeTimers()
+  vi.useFakeTimers()
 
   let body = {
 	'type': 'fixed',
