@@ -1,4 +1,4 @@
-import type { config } from '@/types'
+import type { config, Facts } from '@/types'
 
 export class RateLimiter {
 
@@ -67,7 +67,6 @@ export class RateLimiter {
 		return new Response(`This shouldn't happen. Got invalid json`, { status: 400 })
 	}
 
-
       const keyPrefix = `${config.type}|${config.scope}|${config.key}|${config.limit}|${config.interval}`
 
       const currentWindow = Math.floor(Date.now() / 1000 / config.interval)
@@ -85,23 +84,21 @@ export class RateLimiter {
       const currentCount = parseInt(await this.state.storage.get(currentKey) as string) || 0
       const previousCount = parseInt(await this.state.storage.get(previousKey) as string) || 0
 
-      let resBody: { error?: string, rate?: number, remaining?: number, resets?: number } = {}
+	  let facts: Facts = {}
 
 	  switch(config.type) {
         case 'sliding':
-          const rate = (previousCount * (config.interval - distanceFromLastWindow) / config.interval) + currentCount  
-          resBody.rate = rate
-          if(rate >= config.limit) {
-            resBody.error = error_string
+          facts.rate = (previousCount * (config.interval - distanceFromLastWindow) / config.interval) + currentCount
+          if(facts.rate >= config.limit) {
+            facts.error = error_string
           }
           break;
         case 'fixed':
-          resBody.resets = (currentWindow * config.interval) + config.interval
-          if(currentCount >= config.limit) {
-            resBody.error = error_string
-          } else {
-            resBody.remaining = (config.limit-currentCount) - 1 // -1 because we're recording this request *after* the check
-            resBody.resets = (currentWindow * config.interval) + config.interval
+          facts.resets = Number((currentWindow * config.interval) + config.interval)
+		  facts.remaining = (config.limit - currentCount)
+          if(facts.remaining <= 0) {
+            facts.error = error_string
+			facts.remaining = undefined
           }
           break;
         default: {
@@ -112,27 +109,23 @@ export class RateLimiter {
       let headers:Headers = new Headers()
       headers.set('Content-Type', 'application/json')
 
-      if(! resBody.error) {
+      if(facts.error !== error_string) {
         await recordRequest()
-        return new Response(JSON.stringify(resBody), { status: 200, headers: headers })
+        return new Response(JSON.stringify(facts), { status: 200, headers: headers })
       } else {
         let exp: number = 0
-		if(undefined === config.action) {
-			config.action = { type: 'block', for: config.interval }
-		}
 
-        if(config.type == 'fixed' && resBody.resets) {
-          exp = (config.action.type == "block" && config.action.for)? config.action.for : Math.floor(resBody.resets - (Date.now() / 1000))
+        if( config.type == 'fixed') {
+          exp = Math.floor(facts.resets - (Date.now() / 1000))
           headers.set('Expires', new Date(Date.now() + (exp * 1000)).toUTCString())
-        } else if(config.type == 'sliding' && resBody.rate && resBody.rate > config.limit) {
-          exp = (config.action.type == "block" && config.action.for)? config.action.for : Math.floor(((resBody.rate / config.limit) - 1) * config.interval)
+        } else if( config.type == 'sliding' && facts.rate > config.limit ) {
+          exp = Math.floor(((facts.rate / config.limit) - 1) * config.interval)
           headers.set('Expires', new Date((Date.now()) + (1000 * exp)).toUTCString())
         }
         headers.set('Cache-Control', `public, max-age=${exp}, s-maxage=${exp}, must-revalidate`)
       }
-
-	  const status = (config.action.type == "block")? 429 : config.action.status
-      return new Response(JSON.stringify(resBody), { status: status, headers: headers })
+      
+	  return new Response(JSON.stringify(facts), { status: 200, headers: headers })
     }
 
 }

@@ -3,11 +3,9 @@ Rate Limiter - built for [Cloudflare Workers](https://developers.cloudflare.com/
 ## Features
 - [x] Supports [fixed or sliding window algorithms](https://www.quinbay.com/blog/understanding-rate-limiting-algorithms)
 - [x] Scoped rate-limiting
-- [x] Responses provide usage information
 - [x] Caching 
 - [x] Cleanup of stale DO data using [alarm](https://developers.cloudflare.com/workers/learning/using-durable-objects/#alarms-in-durable-objects)
-- [x] Custom block time
-- [x] Actions: one of [block,redirect]
+- [x] Responses provide all information needed to take actions (or not)
 - [ ] Tested in production (well, not actually)
 
 
@@ -25,39 +23,24 @@ Well, it all depends in the use-case. You can check out the [cost calculator](ht
 * `key`: the key is the client information, can be an IP (most of the time), or a network, a username, or even a user-agent. In general, feel free to use whatever you like.
 * `limit`: the value of this header provides the request limit (e.g. 10).
 * `interval`: the interval (in seconds) upon which all calculations are based.
-* `action?`: optional, defaults to block, but can be one of
-```json
-{
-	"type": "block",
-	"for?": "optional, seconds to be blocked for, defaults to value of {interval}"
-}
-```
-or
-```json
-{
-	"type": "redirect",
-	"to": "https://somewhere",
-	"status": "one of [300, 301, 302, 303, 304, 307, 308]"
-}
-```
 
 ## Responses
 Response __status__ will be one of:
-* `200`, meaning that the request __should not be__ rate-limited
-* `3xx`, means the request __should be__ redirected
-* `429`, meaning that the request __should be__ rate-limited
+* `200`, meaning that the request was processed without problems
+* `400`, JSON input error
+* 
+Response __body__ on successful requests depends on the type of the algorithm used and the outcome.
 
-Response __body__ depends on the type of the algorithm used and the status.   
+If the request __should be rate-limited__, you would find an `error` property, with a value of `rate-limited`, if not, depending on the algorithm used, you will find quota information:
 
-The `sliding` type will produce the following bodies:
-* on `200` status (not rate-limited):
+
+* The `sliding` type might return one of the two following bodies:
 ```json
 {
     "rate": "number, rate of the incoming requests"
 }
 ```
-
-* on `429` status (rate-limited):
+or
 ```json
 {
 	"rate": "number, rate of the incoming requests",
@@ -65,16 +48,14 @@ The `sliding` type will produce the following bodies:
 }
 ```   
 
-The `fixed` type will respond with the following bodies:
-* on `200` status (not rate-limited):
+The `fixed` type might return one of the following bodies:
 ```json
-{
+{ 
 	"resets": "number, seconds since epoch",
 	"remaining": "number, remaining requests until rate-limiting"
 }
 ```   
-
-* on `429` status (rate-limited):
+or
 ```json
 {
 	"resets": "number, seconds since epoch",

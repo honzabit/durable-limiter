@@ -15,6 +15,11 @@ new_classes = ["RateLimiter"]
 [build]
 command = "node build.js"
 
+[build.upload]
+format = "modules"
+dir = "dist"
+main = "./index.mjs"
+
 [miniflare]
 kv_persist = "./kv-data/"
 cache_persist = "./cache-data/"

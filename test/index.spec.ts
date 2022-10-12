@@ -21,11 +21,12 @@ test("sliding rate limit", async () => {
   let res
   
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(200);
+  expect(await res.json()).toStrictEqual(expect.objectContaining({
+    rate: expect.any(Number),
+  }))
+
   
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(429);
-
   expect(await res.json()).toStrictEqual(expect.objectContaining({
     error: expect.any(String),
     rate: expect.any(Number),
@@ -35,19 +36,30 @@ test("sliding rate limit", async () => {
   rlRequest = new Request("http://localhost", { method: "POST", body: JSON.stringify(body) })
 
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(200);
+  expect(await res.json()).toStrictEqual(expect.objectContaining({
+    rate: expect.any(Number),
+  }))
 
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(429);
+  expect(await res.json()).toStrictEqual(expect.objectContaining({
+    rate: expect.any(Number),
+	error: expect.any(String),
+  }))
 
   body.scope = 'another.domain'
   rlRequest = new Request("http://localhost", { method: "POST", body: JSON.stringify(body) })
 
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(200);
+  expect(await res.json()).toStrictEqual(expect.objectContaining({
+	rate: expect.any(Number),
+  }))
 
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(429);
+  expect(await res.json()).toStrictEqual(expect.objectContaining({
+	rate: expect.any(Number),
+	error: expect.any(String),
+  }))
+
 
 });
 
@@ -67,45 +79,69 @@ test("fixed rate limit", async () => {
   let res
   
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(200);
+  expect(await res.json()).toStrictEqual(expect.objectContaining({
+	remaining: expect.any(Number),
+	resets: expect.any(Number),
+  }))
   
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(429);
+  expect(await res.clone().json()).toStrictEqual(expect.objectContaining({
+	error: expect.any(String),
+	resets: expect.any(Number),
+  }))
 
   type resBody = { resets: string }
   const resBody: resBody = await res.json()
   
   expect(resBody).toStrictEqual(expect.objectContaining({
     error: expect.any(String),
-    resets: expect.any(String),
+    resets: expect.any(Number),
   }))
 
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(429);
+  expect(await res.json()).toStrictEqual(expect.objectContaining({
+	error: expect.any(String),
+	resets: expect.any(Number),
+  }))
   expect(res.headers.get('cf-cache-status')).toBe('HIT')
-  expect(res.headers.get('x-dl-cache')).toBe('HIT')
 
   body.key = '10.10.10.11'
   rlRequest = new Request("http://localhost", { method: "POST", body: JSON.stringify(body) })
 
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(200);
+  expect(await res.json()).toStrictEqual(expect.objectContaining({
+	remaining: expect.any(Number),
+	resets: expect.any(Number),
+  }))
+
 
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(429);
+  expect(await res.json()).toStrictEqual(expect.objectContaining({
+	error: expect.any(String),
+	resets: expect.any(Number),
+  }))
 
   body.scope = 'another_domain'
   rlRequest = new Request("http://localhost", { method: "POST", body: JSON.stringify(body) })
   
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(200);
+  expect(await res.json()).toStrictEqual(expect.objectContaining({
+	remaining: expect.any(Number),
+	resets: expect.any(Number),
+  }))
 
   res = await handleRequest(rlRequest, env, ctx);
-  expect(res.status).toBe(429);
+  expect(await res.json()).toStrictEqual(expect.objectContaining({
+	error: expect.any(String),
+	resets: expect.any(Number),
+  }))
 
   setTimeout(async () => {
     res = await handleRequest(rlRequest, env, ctx);
-    expect(res.status).toBe(200);
+	expect(await res.json()).toStrictEqual(expect.objectContaining({
+		remaining: expect.any(Number),
+		resets: expect.any(Number),
+	}))
   }, 15000)
 
 });
