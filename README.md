@@ -28,7 +28,8 @@ Well, it all depends in the use-case. You can check out the [cost calculator](ht
 Response __status__ will be one of:
 * `200`, meaning that the request was processed without problems
 * `400`, JSON input error
-* 
+* `500`, any other error, info can be found at response body
+
 Response __body__ on successful requests depends on the type of the algorithm used and the outcome.
 
 If the request __should be rate-limited__, you would find an `error` property, with a value of `rate-limited`, if not, depending on the algorithm used, you will find quota information:
