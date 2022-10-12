@@ -44,22 +44,22 @@ If the request __should be rate-limited__, you would find an `error` property, w
 or
 ```json
 {
-	"rate": "number, rate of the incoming requests",
-	"error": "rate-limited"
+    "rate": "number, rate of the incoming requests",
+    "error": "rate-limited"
 }
 ```   
 
-The `fixed` type might return one of the following bodies:
+* The `fixed` type might return one of the following bodies:
 ```json
 { 
-	"resets": "number, seconds since epoch",
-	"remaining": "number, remaining requests until rate-limiting"
+    "resets": "number, seconds since epoch",
+    "remaining": "number, remaining requests until rate-limiting"
 }
 ```   
 or
 ```json
 {
-	"resets": "number, seconds since epoch",
-	"error": "rate-limited"
+    "resets": "number, seconds since epoch",
+    "error": "rate-limited"
 }
 ```
