@@ -18,28 +18,30 @@ export class RateLimiter {
         vals.forEach((_value: unknown, key: string) => {
             const [type, scope, _dlkey, _limit, interval, _ts] = key.split('|');
             const now = Date.now();
-            if (type == 'fixed') {
+            if (type === 'fixed') {
+				const ts_less_than = Math.floor(now / 1000) - parseInt(interval)
                 if (
                     deleteList.find(el => {
-                        return el.type == type && el.scope == scope && el.ts_less_than == Math.floor(now / 1000 / parseInt(interval)) - parseInt(interval);
+                        return el.type === type && el.scope === scope && el.ts_less_than === ts_less_than
                     }) === undefined
                 ) {
                     deleteList.push({
                         type: type,
                         scope: scope,
-                        ts_less_than: Math.floor(now / 1000 / parseInt(interval)) - parseInt(interval)
+                        ts_less_than: ts_less_than
                     });
                 }
             } else {
+				const ts_less_than = Math.floor(now / 1000) - (parseInt(interval) * 2)
                 if (
                     deleteList.find(el => {
-                        return el.type == type && el.scope == scope && el.ts_less_than == Math.floor(now / 1000 / parseInt(interval)) - parseInt(interval) * 2;
+                        return el.type === type && el.scope === scope && el.ts_less_than === ts_less_than;
                     }) === undefined
                 ) {
                     deleteList.push({
                         type: type,
                         scope: scope,
-                        ts_less_than: Math.floor(now / 1000 / parseInt(interval)) - parseInt(interval) * 2
+                        ts_less_than: ts_less_than
                     });
                 }
             }
@@ -54,7 +56,7 @@ export class RateLimiter {
              * delete all keys matching scope, type and having timestamp less than ts_less_than
              */
             deleteList.forEach(async el => {
-                if (el.type == type && el.scope == scope && parseInt(ts) < el.ts_less_than) {
+                if (el.type === type && el.scope === scope && parseInt(ts) < el.ts_less_than) {
                     await this.state.storage.delete(key);
                 }
             });
@@ -98,13 +100,14 @@ export class RateLimiter {
         const facts: Facts = {};
 
         switch (config.type) {
-            case 'sliding':
+            case 'sliding': {
                 facts.rate = (previousCount * (config.interval - distanceFromLastWindow)) / config.interval + currentCount;
                 if (facts.rate >= config.limit) {
                     facts.error = error_string;
                 }
                 break;
-            case 'fixed':
+			}
+            case 'fixed': {
                 facts.resets = Number(currentWindow * config.interval + config.interval);
                 facts.remaining = config.limit - currentCount;
                 if (facts.remaining <= 0) {
@@ -112,6 +115,7 @@ export class RateLimiter {
                     facts.remaining = undefined;
                 }
                 break;
+			}
             default: {
                 break;
             }
@@ -126,10 +130,10 @@ export class RateLimiter {
         } else {
             let exp = 0;
 
-            if (config.type == 'fixed') {
+            if (config.type === 'fixed') {
                 exp = Math.floor(facts.resets - Date.now() / 1000);
                 headers.set('Expires', new Date(Date.now() + exp * 1000).toUTCString());
-            } else if (config.type == 'sliding' && facts.rate > config.limit) {
+            } else if (config.type === 'sliding' && facts.rate > config.limit) {
                 exp = Math.floor((facts.rate / config.limit - 1) * config.interval);
                 headers.set('Expires', new Date(Date.now() + 1000 * exp).toUTCString());
             }
