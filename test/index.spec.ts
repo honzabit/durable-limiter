@@ -1,9 +1,8 @@
 import { test, expect, vi } from 'vitest'
 import { handleRequest } from "@/index";
 
-  const env = getMiniflareBindings();
-  const ctx: ExecutionContext = { waitUntil: () => { }, passThroughOnException: () => { } }
-
+const env = getMiniflareBindings();
+const ctx: ExecutionContext = { waitUntil: () => { }, passThroughOnException: () => { } }
 
 test("sliding rate limit", async () => {
   

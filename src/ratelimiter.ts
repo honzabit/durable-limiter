@@ -1,5 +1,9 @@
 import type { config, Facts } from '@/types';
 
+export const getStorageKeyPrefix = (config: config):string => {
+	return `${config.type}|${config.scope}|${config.key}|${config.limit}|${config.interval}`
+}
+
 export class RateLimiter {
     state: DurableObjectState;
     env: Bindings;
@@ -11,37 +15,39 @@ export class RateLimiter {
 
     async alarm(): Promise<void> {
         const vals = await this.state.storage.list();
-        const deleteList: { type: string; scope: string; ts_less_than: number }[] = [];
+        const deleteList: { type: string; scope: string; bucket_before: number }[] = [];
         /**
          * first run to populate deleteList
          */
         vals.forEach((_value: unknown, key: string) => {
             const [type, scope, _dlkey, _limit, interval, _ts] = key.split('|');
-            const now = Date.now();
+			const intervalAsNumber = parseInt(interval);
+
+            const currentBucket = Math.floor(Date.now() / 1000 / intervalAsNumber);
             if (type === 'fixed') {
-				const ts_less_than = Math.floor(now / 1000) - parseInt(interval)
+				const bucket_before = currentBucket
                 if (
                     deleteList.find(el => {
-                        return el.type === type && el.scope === scope && el.ts_less_than === ts_less_than
+                        return el.type === type && el.scope === scope && el.bucket_before === bucket_before
                     }) === undefined
                 ) {
                     deleteList.push({
                         type: type,
                         scope: scope,
-                        ts_less_than: ts_less_than
+                        bucket_before: bucket_before
                     });
                 }
             } else {
-				const ts_less_than = Math.floor(now / 1000) - (parseInt(interval) * 2)
+				const bucket_before = currentBucket - 1
                 if (
                     deleteList.find(el => {
-                        return el.type === type && el.scope === scope && el.ts_less_than === ts_less_than;
+                        return el.type === type && el.scope === scope && el.bucket_before === bucket_before;
                     }) === undefined
                 ) {
                     deleteList.push({
                         type: type,
                         scope: scope,
-                        ts_less_than: ts_less_than
+                        bucket_before: bucket_before
                     });
                 }
             }
@@ -51,12 +57,12 @@ export class RateLimiter {
          * second run to delete keys
          */
         vals.forEach((_value: unknown, key: string) => {
-            const [type, scope, _dlkey, _limit, _interval, ts] = key.split('|');
+            const [type, scope, _dlkey, _limit, _interval, bucket] = key.split('|');
             /**
              * delete all keys matching scope, type and having timestamp less than ts_less_than
              */
             deleteList.forEach(async el => {
-                if (el.type === type && el.scope === scope && parseInt(ts) < el.ts_less_than) {
+                if (el.type === type && el.scope === scope && parseInt(bucket) < el.bucket_before) {
                     await this.state.storage.delete(key);
                 }
             });
@@ -80,7 +86,7 @@ export class RateLimiter {
             return new Response(`This shouldn't happen. Got invalid json`, { status: 400 });
         }
 
-        const keyPrefix = `${config.type}|${config.scope}|${config.key}|${config.limit}|${config.interval}`;
+        const keyPrefix = getStorageKeyPrefix(config);
 
         const currentWindow = Math.floor(Date.now() / 1000 / config.interval);
         const distanceFromLastWindow = (Date.now() / 1000) % config.interval;

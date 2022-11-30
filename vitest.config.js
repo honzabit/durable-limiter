@@ -7,7 +7,7 @@ export default defineConfig({
     // `wrangler.toml` files by default, but you can pass any additional Miniflare
     // API options here:
     environmentOptions: {
-      
+						
     },
 	root: "./src",
 	watch: false
