@@ -8,14 +8,19 @@ Rate Limiter - built for [Cloudflare Workers](https://developers.cloudflare.com/
 - [x] Responses provide all information needed to take actions (or not)
 - [ ] Tested in production (well, not actually)
 
+## FAQ
 
-## How to use
+### How to use
 You can use it as a subworker [as described here](https://developers.cloudflare.com/workers/platform/bindings/about-service-bindings/).
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ianapiron/durable-limiter)
 
-## What about pricing? How it compares with CF's own rate-limiter?
+### But it doesn't rate limit anything
+Yeah, that's the sad truth. The code is there to decide whether or not a request should be rate-limited, but currently it just outputs the results in a JSON response. The reason is because this is how it's being used as part of another project I'm working on. That said, I think it's a good starting point as it would require minimal changes from you to send the right responses back.
+
+### What about pricing? How it compares with CF's own rate-limiter?
 Well, it all depends in the use-case. You can check out the [cost calculator](https://dl-cost-calculator.dev0x.workers.dev/).
+
 
 ## Description of JSON Body (usage)
 * `type`: type can be one of `sliding` or `fixed` and describes the algorithm that will be used.
@@ -44,22 +49,22 @@ If the request __should be rate-limited__, you would find an `error` property, w
 or
 ```json
 {
-	"rate": "number, rate of the incoming requests",
-	"error": "rate-limited"
+    "rate": "number, rate of the incoming requests",
+    "error": "rate-limited"
 }
 ```   
 
-The `fixed` type might return one of the following bodies:
+* The `fixed` type might return one of the following bodies:
 ```json
 { 
-	"resets": "number, seconds since epoch",
-	"remaining": "number, remaining requests until rate-limiting"
+    "resets": "number, seconds since epoch",
+    "remaining": "number, remaining requests until rate-limiting"
 }
 ```   
 or
 ```json
 {
-	"resets": "number, seconds since epoch",
-	"error": "rate-limited"
+    "resets": "number, seconds since epoch",
+    "error": "rate-limited"
 }
 ```
