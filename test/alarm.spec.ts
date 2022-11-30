@@ -27,7 +27,7 @@ describe('Alarm', () => {
       storage = await getMiniflareDurableObjectStorage(id);
     });
 
-    it('should expire keys previous to 1 interval when [fixed] algo is used', async () => {
+	it('should expire keys previous to 1 interval when [fixed] algo is used', async () => {
 		config.type = 'fixed'
 		/**
 		 * set "current" to 1 interval in the past because I can't use fake date inside the alarm
@@ -45,6 +45,8 @@ describe('Alarm', () => {
 		expect(values.get(storageKey)).toBe(1)
 
 		const newWindow = `${getStorageKeyPrefix(config)}|${windowOfAlarm}`
+		storage.put(newWindow, 1)
+
 		await rl.fetch("http://localhost/", { method: "POST", body: JSON.stringify(config) });
 		await flushMiniflareDurableObjectAlarms()
 		const values2 = await storage.list()
@@ -58,31 +60,34 @@ describe('Alarm', () => {
 		 * set "current" to 1 interval in the past because I can't use fake date inside the alarm
 		 */
 		const rl = env.RATE_LIMITER.get(id)
-		const currentWindowBucket = getBucket(Date.now(), config.interval) - 2
-		const currentWindow = `${getStorageKeyPrefix(config)}|${currentWindowBucket}`
+		const minusTwoWindowsBucket = getBucket(Date.now(), config.interval) - 2
+		const minusTwoWindows = `${getStorageKeyPrefix(config)}|${minusTwoWindowsBucket}`
+		const minusOneWindow = `${getStorageKeyPrefix(config)}|${minusTwoWindowsBucket + 1}`
+		const thisWindow = `${getStorageKeyPrefix(config)}|${minusTwoWindowsBucket + 2}`
 
-		storage.put(currentWindow, 1)
+		storage.put(minusTwoWindows, 1)
 		const values = await storage.list()
 		expect(values.size).toBe(1)
-		expect(values.get(currentWindow)).toBe(1)
+		expect(values.get(minusTwoWindows)).toBe(1)
 
 		/* set new key and trigger alarm */
+		storage.put(minusOneWindow, 1)
 		await rl.fetch("http://localhost/", { method: "POST", body: JSON.stringify(config) });
 		await flushMiniflareDurableObjectAlarms()
-		const nextWindow = `${getStorageKeyPrefix(config)}|${currentWindowBucket + 1}`
-		storage.put(nextWindow, 1)
+
 		const values2 = await storage.list()
 		expect(values2.size).toBe(2)
-		expect(values2.get(nextWindow)).toBe(1)
+		expect(values2.get(thisWindow)).toBe(1)
+		expect(values2.get(minusOneWindow)).toBe(1)
+		expect(values2.get(minusTwoWindows)).toBe(undefined)
 
 		await rl.fetch("http://localhost/", { method: "POST", body: JSON.stringify(config) });
 		await flushMiniflareDurableObjectAlarms()
-		const secondNextWindow = `${getStorageKeyPrefix(config)}|${currentWindowBucket + 2}`
-		storage.put(secondNextWindow, 1)
 		const values3 = await storage.list()
 		expect(values3.size).toBe(2)
-		expect(values3.get(secondNextWindow)).toBe(1)
-		expect(values3.get(nextWindow)).toBe(1)
+		expect(values3.get(thisWindow)).toBe(1)
+		expect(values3.get(minusOneWindow)).toBe(1)
+		expect(values2.get(minusTwoWindows)).toBe(undefined)
     });
 
 });
